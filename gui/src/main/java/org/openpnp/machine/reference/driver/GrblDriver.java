@@ -86,8 +86,9 @@ public class GrblDriver implements ReferenceDriver, Runnable {
 	public void actuate(ReferenceActuator actuator, boolean on)
 			throws Exception {
 		if (actuator.getIndex() == 0) {
+                        if (on) Thread.sleep(200);
 			sendCommand(on ? "M8" : "M9");
-			dwell();
+                        if (on) Thread.sleep(800);
 		}
 	}
 	
@@ -95,7 +96,11 @@ public class GrblDriver implements ReferenceDriver, Runnable {
 	
 	@Override
 	public void home(ReferenceHead head) throws Exception {
-		sendCommand("G28");
+		sendCommand("G28 X");
+		sendCommand("G00 X1 F300");
+		sendCommand("G28 Y");
+		sendCommand("G00 Y1 F600");
+		sendCommand("G92 X0 Y0 Z0 C0");
 		x = y = z= c = 0;
 	}
 	
@@ -131,7 +136,7 @@ public class GrblDriver implements ReferenceDriver, Runnable {
 		// Also, since C is so slow in comparison, we just increase it
 		// by a factor of 10.
 		if (c != this.c && (x != this.x || y != this.y || z != this.z)) {
-			moveTo(hm, location.derive(Double.NaN, Double.NaN, Double.NaN, null), speed);
+			//moveTo(hm, location.derive(Double.NaN, Double.NaN, Double.NaN, null), speed);
 		}
 		StringBuffer sb = new StringBuffer();
 		if (!Double.isNaN(x) && x != this.x) {
@@ -145,7 +150,7 @@ public class GrblDriver implements ReferenceDriver, Runnable {
 		}
 		if (!Double.isNaN(c) && c != this.c) {
 			// TODO see above bug note, and remove this when fixed.
-			feedRateMmPerMinute *= 10;
+			//feedRateMmPerMinute *= 10;
 			sb.append(String.format(Locale.US, "C%2.2f ", c));
 		}
 		if (sb.length() > 0) {
@@ -161,20 +166,28 @@ public class GrblDriver implements ReferenceDriver, Runnable {
 	
 	@Override
 	public void setEnabled(boolean enabled) throws Exception {
-		sendCommand("$1000=" + (enabled ? "1" : "0"));
+		//sendCommand("$1000=" + (enabled ? "1" : "0"));
 	}
 
 	@Override
 	public void pick(ReferenceNozzle nozzle) throws Exception {
+                sendCommand("M8");
 		sendCommand("M4");
-		dwell();
-	}
+                dwell();
+		Thread.sleep(1500);
+                sendCommand("M9");            
+		Thread.sleep(100);	
+        }
 
 	@Override
 	public void place(ReferenceNozzle nozzle) throws Exception {
+                sendCommand("M8");
+		Thread.sleep(200);
 		sendCommand("M5");
-		dwell();
-	}
+		Thread.sleep(2500);
+                sendCommand("M9");            
+		Thread.sleep(100);	
+        }
 
 	public synchronized void connect(String portName, int baud)
 			throws Exception {
@@ -184,7 +197,7 @@ public class GrblDriver implements ReferenceDriver, Runnable {
 	public synchronized void connect(CommPortIdentifier commPortId, int baud)
 			throws Exception {
 		disconnect();
-
+                logger.debug("Opening COM PORT "+ commPortId.getName());
 		if (commPortId.isCurrentlyOwned()) {
 			throw new Exception("Port is in use.");
 		}
@@ -218,13 +231,13 @@ public class GrblDriver implements ReferenceDriver, Runnable {
 			// Wait up to 3 seconds for Grbl to say Hi
 			// If we get anything at this point it will have been the settings
 			// dump that is sent after reset.
-			responses = sendCommand(null, 3000);
+			responses = sendCommand("G00 Z1.0", 3000);
 		}
 
 		processConnectionResponses(responses);
-
+/*
 		for (int i = 0; i < 5 && !connected; i++) {
-			responses = sendCommand("$", 5000);
+			responses = sendCommand("G00 Z1.0", 5000);
 			processConnectionResponses(responses);
 		}
 		
@@ -234,13 +247,18 @@ public class GrblDriver implements ReferenceDriver, Runnable {
 						minimumRequiredVersion));
 		}
 		
-		if (connectedVersion < minimumRequiredVersion) {
-			throw new Error(String.format("This driver requires Grbl version %.2f or higher. You are running version %.2f", minimumRequiredVersion, connectedVersion));
-		}
+//		if (connectedVersion < minimumRequiredVersion) {
+//			throw new Error(String.format("This driver requires Grbl version %.2f or higher. You are running version %.2f", minimumRequiredVersion, connectedVersion));
+//		}
 		
 		// We are connected to at least the minimum required version now
 		// So perform some setup
-		
+
+		sendCommand("G28 X");
+		sendCommand("G00 X1 F300");
+		sendCommand("G28 Y");
+		sendCommand("G00 Y1 F600");
+  */              
 		// Turn off the stepper drivers
 		setEnabled(false);
 		
@@ -257,6 +275,10 @@ public class GrblDriver implements ReferenceDriver, Runnable {
 				connected = true;
 				logger.debug(String.format("Connected to Grbl Version: %.2f", connectedVersion));
 			}
+			if (response.startsWith("ok")) {
+                            connected = true;
+                            logger.debug("Connected OK");
+                        }                        
 		}
 	}
 
@@ -287,7 +309,7 @@ public class GrblDriver implements ReferenceDriver, Runnable {
 			if (command != null) {
 				logger.debug("sendCommand({}, {})", command, timeout);
 				output.write(command.getBytes());
-				output.write("\n".getBytes());
+				output.write("\r\n".getBytes());
 			}
 			if (timeout == -1) {
 				commandLock.wait();
@@ -319,7 +341,8 @@ public class GrblDriver implements ReferenceDriver, Runnable {
 	 * @throws Exception
 	 */
 	private void dwell() throws Exception {
-		sendCommand("G4 P0");
+            Thread.sleep(400);                    
+//		sendCommand("G4 P0");
 	}
 
 	private List<String> drainResponseQueue() {
@@ -339,12 +362,12 @@ public class GrblDriver implements ReferenceDriver, Runnable {
 				if (ch == -1) {
 					return null;
 				}
-				else if (ch == '\n' || ch == '\r') {
+				else if (ch == '\n' /*|| ch == '\r'*/) {
 					if (line.length() > 0) {
 						return line.toString();
 					}
 				}
-				else {
+                                else if (ch != '\r') {
 					line.append((char) ch);
 				}
 			}
