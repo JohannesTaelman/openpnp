@@ -30,6 +30,9 @@ import java.util.regex.PatternSyntaxException;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
+import static javax.swing.Action.NAME;
+import static javax.swing.Action.SHORT_DESCRIPTION;
+import static javax.swing.Action.SMALL_ICON;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -67,6 +70,7 @@ import org.openpnp.spi.Nozzle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import javax.swing.border.TitledBorder;
+import org.openpnp.spi.Head;
 
 @SuppressWarnings("serial")
 public class FeedersPanel extends JPanel implements WizardContainer {
@@ -114,6 +118,7 @@ public class FeedersPanel extends JPanel implements WizardContainer {
 
 		toolBar.addSeparator();
 		toolBar.add(feedFeederAction);
+		toolBar.add(feedFeederVisionAction);
 		toolBar.add(showPartAction);
 
 		JPanel panel_1 = new JPanel();
@@ -324,6 +329,36 @@ public class FeedersPanel extends JPanel implements WizardContainer {
 		}
 	};
 
+	public Action feedFeederVisionAction = new AbstractAction() {
+		{
+			putValue(SMALL_ICON,
+					new ImageIcon(getClass().getResource("/icons/feed.png")));
+			putValue(NAME, "FeedVision");
+			putValue(SHORT_DESCRIPTION,
+					"Command the selected feeder to perform a feed operation, and recenter on vision.");
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent arg0) {
+			new Thread() {
+				public void run() {
+					Feeder feeder = getSelectedFeeder();
+					Nozzle nozzle = MainFrame.machineControlsPanel.getSelectedNozzle();
+					try {
+						feeder.feed(nozzle);
+                                                Head head = nozzle.getHead();
+                                                head.getCameras().get(0).moveTo(feeder.getPickLocation(), 100);
+					}
+					catch (Exception e) {
+						MessageBoxes.errorBox(FeedersPanel.this, "Feed Error",
+								e);
+					}
+				}
+			}.start();
+		}
+	};
+        
+        
 	public Action showPartAction = new AbstractAction() {
 		{
 			putValue(SMALL_ICON,
