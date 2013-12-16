@@ -94,7 +94,7 @@ public class PgrCameraConfigurationWizard extends JPanel implements Wizard {
 		JLabel lblDeviceId = new JLabel("Driver");
 		panelGeneral.add(lblDeviceId, "2, 2, right, default");
 		
-                String[] deviceIds = {"default"};
+                String[] deviceIds = {"default"," "};
 
                 comboBoxDriver = new JComboBox(deviceIds);
 		panelGeneral.add(comboBoxDriver, "4, 2, left, default");

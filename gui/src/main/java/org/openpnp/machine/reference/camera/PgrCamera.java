@@ -104,7 +104,7 @@ public class PgrCamera extends ReferenceCamera implements Runnable {
         System.out.println("\nStarting capture.");
         startCapture();
 
-        PGCameraMode mode = getSupportedCameraModes()[0];
+        PGCameraMode mode = getSupportedCameraModes()[2]; // 30 fps
         System.out.println("Capturing an image with mode: " + mode );
 
         //Changing the camera mode will cause the camera to stop capturing, it must be started again.
