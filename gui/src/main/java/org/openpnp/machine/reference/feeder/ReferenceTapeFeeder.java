@@ -109,7 +109,10 @@ public class ReferenceTapeFeeder extends ReferenceFeeder {
 	    if (pickLocation == null) {
 	        pickLocation = location;
 	    }
-	    return pickLocation;
+            if (visionOffset == null)
+                return pickLocation;
+            else
+                return pickLocation.add(visionOffset);
     }
 
     @Override
@@ -164,9 +167,9 @@ public class ReferenceTapeFeeder extends ReferenceFeeder {
 		Location feedEndLocation = this.feedEndLocation;
 		pickLocation = this.location;
 		if (visionOffset != null) {
-            feedStartLocation = feedStartLocation.subtract(visionOffset);
-            feedEndLocation = feedEndLocation.subtract(visionOffset);
-            pickLocation = pickLocation.subtract(visionOffset);
+//            feedStartLocation = feedStartLocation.subtract(visionOffset);
+//            feedEndLocation = feedEndLocation.subtract(visionOffset);
+//            pickLocation = pickLocation.subtract(visionOffset);
 		}
 		
 		// Move the actuator to the feed start location.
@@ -179,7 +182,10 @@ public class ReferenceTapeFeeder extends ReferenceFeeder {
 		actuator.moveTo(feedStartLocation, 1.0);
 
 		// drag the tape
-		actuator.moveTo(feedEndLocation, feedSpeed);
+                Location feed2Loc = feedEndLocation.derive(feedEndLocation.getX()-0.5, null, null, null);
+		actuator.moveTo(feed2Loc, feedSpeed);
+
+                actuator.moveTo(feedEndLocation, feedSpeed);
 
 		head.moveToSafeZ(1.0);
 
@@ -192,9 +198,10 @@ public class ReferenceTapeFeeder extends ReferenceFeeder {
 			logger.debug("final visionOffsets " + visionOffset);
 		}
 		
-        logger.debug("Modified pickLocation {}", pickLocation);
+        logger.debug("Modified pickLocation {}", getPickLocation());
 	}
-	
+
+    
 	// TODO: Throw an Exception if vision fails.
 	private Location getVisionOffsets(Head head, Location pickLocation) throws Exception {
 	    logger.debug("getVisionOffsets({}, {})", head.getId(), pickLocation);
@@ -223,7 +230,7 @@ public class ReferenceTapeFeeder extends ReferenceFeeder {
 		// Settle the camera
 		// TODO: This should be configurable, or maybe just built into
 		// the VisionProvider
-		Thread.sleep(200);
+		Thread.sleep(2000);
 		
 		VisionProvider visionProvider = camera.getVisionProvider();
 		
